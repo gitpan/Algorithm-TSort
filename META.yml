@@ -1,16 +1,17 @@
 --- #YAML:1.0
 name:               Algorithm-TSort
-version:            0.01
+version:            0.02
 abstract:           Perl extension for topological sort
 author:
     - A. G. Grishaev <grian@cpan.org>
-license:            unknown
+license:            perl
 distribution_type:  module
 configure_requires:
     ExtUtils::MakeMaker:  0
 build_requires:
     ExtUtils::MakeMaker:  0
-requires:  {}
+requires:
+    perl:  5.008001
 no_index:
     directory:
         - t

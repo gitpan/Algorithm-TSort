@@ -3,4 +3,6 @@ Revision history for Perl extension Algorithm::TSort.
 0.01  Tue Sep 21 13:58:04 2010
 	- original version; created by h2xs 1.23 with options
 		-AXO -n Algorithm::TSort
+0.02  Tue Oct 12 11:41    2010 MSK
+	- rewrite Makefile.PL for LICENCE info.
 
