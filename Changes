@@ -6,3 +6,5 @@ Revision history for Perl extension Algorithm::TSort.
 0.02  Tue Oct 12 11:41    2010 MSK
 	- rewrite Makefile.PL for LICENCE info.
 
+0.03  Jan 22:00   2012 MSK
+	- Fix minor errors.

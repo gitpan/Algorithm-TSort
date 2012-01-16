@@ -1,11 +1,8 @@
 package Algorithm::TSort;
-
 use 5.008000;
 use strict;
 use warnings;
-
 require Exporter;
-
 our @ISA = qw(Exporter);
 
 # Items to export into callers namespace by default. Note: do not export
@@ -23,101 +20,110 @@ our %EXPORT_TAGS = ( 'all' => [ qw(
 our @EXPORT_OK = ( @{ $EXPORT_TAGS{'all'} } );
 
 our @EXPORT = qw( tsort );
-	
 
-our $VERSION = '0.02';
+our $VERSION = '0.03';
 {
-	package Algorithm::TSort::ADJ;
+    package Algorithm::TSort::ADJ;
+    sub adj_nodes {
+        my $self = shift;
+        my $node = shift;
+        for ( $self->{$node} ) {
+            return @$_ if ref;
+        }
+        return ();
+    }
 
-	sub adj_nodes{
-		my $self = shift;
-		my $node = shift;
-		for ( $self->{$node} ){
-			return @$_ if ref ;
-		};
-		return ();
-	};
-	sub nodes{
-		return keys %{ $_[0] };
-	}
-	package Algorithm::TSort::ADJSUB;
-	sub adj_nodes{
-		my $self = shift;
-		my $node = shift;
-		return $$self->($node);
-	};
+    sub nodes {
+        return keys %{ $_[0] };
+    }
+    package Algorithm::TSort::ADJSUB;
+    sub adj_nodes {
+        my $self = shift;
+        my $node = shift;
+        return $$self->($node);
+    }
+    package Algorithm::TSort::Guard;
+    sub new{
+	return bless $_[1], $_[0];
+    }
+    sub DESTROY { $_[0]->() };
 }
-sub Graph($$){
-	my $what = shift;
-	my $data = shift;
-	die "Graph: undefined input" unless defined $what;
-	if ( $what eq 'IO' || $what eq 'SCALAR' ){
-		my %c;
-		my $line;
-		my $fh;
-		if ( $what eq 'SCALAR' ){
-			open $fh, "<", \$data;			
-		}
-		else {
-			$fh = $data;
-		};
-		local $/= "\n";
-		while( defined ( $line = <$fh> ) ){
-			chomp $line;
-			next unless $line =~m/\S/;
-			my ($node , @deps) = split ' ', $line;
-			$c{$node} = \@deps;
-		}
-		return bless \%c, 'Algorithm::TSort::ADJ';
-	}
-	elsif ( $what eq 'ADJSUB' ){
-		return bless \(my $s=$data), 'Algorithm::TSort::ADJSUB';
-	}
-	elsif ( $what eq 'ADJ' ){
-		my %c = %$data;
-		return bless \%c, 'Algorithm::TSort::ADJ';
-	}
-	else {
-		require Carp;
-		Carp::croak( "Graph: don't know about \$what='$what'" );
-	}
+sub Graph($$) {
+    my $what = shift;
+    my $data = shift;
+    die "Graph: undefined input" unless defined $what;
+    if ( $what eq 'IO' || $what eq 'SCALAR' ) {
+        my %c;
+        my $line;
+        my $fh;
+        if ( $what eq 'SCALAR' ) {
+            open $fh, "<", \$data;
+        }
+        else {
+            $fh = $data;
+        }
+        local $/ = "\n";
+        while ( defined( $line = <$fh> ) ) {
+            chomp $line;
+            next unless $line =~ m/\S/;
+            my ( $node, @deps ) = split ' ', $line;
+            $c{$node} = \@deps;
+        }
+        return bless \%c, 'Algorithm::TSort::ADJ';
+    }
+    elsif ( $what eq 'ADJSUB' ) {
+        return bless \( my $s = $data ), 'Algorithm::TSort::ADJSUB';
+    }
+    elsif ( $what eq 'ADJ' ) {
+        my %c = %$data;
+        return bless \%c, 'Algorithm::TSort::ADJ';
+    }
+    else {
+        require Carp;
+        Carp::croak("Graph: don't know about \$what='$what'");
+    }
 }
 
 
 # Preloaded methods go here.
 sub tsort($;@) {
-	my $object = shift;
-    my @nodes = @_;
+    my $object = shift;
+    my @nodes  = @_;
     my @sorted;
     my %seen;
     my $req_sub;
-	unless( @nodes ){
-		if ($object->can( 'nodes' )){
-			@nodes = $object->nodes( );
-		}
-		else {
-			require Carp;
-			Carp::croak( "tsort: no nodes for sort" );
-		}
-	}
+    my $guard;
+    unless (@nodes) {
+        if ( UNIVERSAL::can( $object, 'nodes') ) {
+            @nodes = $object->nodes();
+        }
+        else {
+            require Carp;
+            Carp::croak("tsort: no nodes for sort");
+        }
+    }
+    $guard = Algorithm::TSort::Guard->new(sub {
+	$req_sub = undef; # remove circular dependency;
+    });
+
 
     $req_sub = sub {
-		my $node = shift;
-		if ( $seen{$node} ){
-			die "Algorithm::TSort - can't tsort cicle detected" if ( $seen{$node}== 1 );
-			return;
-		};
-		$seen{$node} = 1;
-		for ( $object->adj_nodes( $node )){
-			$req_sub->( $_ );
-		};
-		$seen{$node} = 2;
-		push @sorted, $node;
+        my $node = shift;
+        if ( $seen{$node} ) {
+            die "Algorithm::TSort - can't tsort cicle detected" if ( $seen{$node} == 1 );
+            return;
+        }
+        $seen{$node} = 1;
+        for ( $object->adj_nodes($node) ) {
+            $req_sub->($_);
+        }
+        $seen{$node} = 2;
+        push @sorted, $node;
     };
 
-    for ( @nodes ){
-		next if $seen{$_};
-		$req_sub->($_);
+    for (@nodes) {
+        next if $seen{$_};
+        $req_sub->($_);
     }
     return reverse @sorted;
 }
@@ -137,7 +143,7 @@ Algorithm::TSort - Perl extension for topological sort
   
   #  $adj = { 1 => [ 2, 3], 2 => [4], 3 => [4]  } ;
   my (@sorted ) = tsort( Graph( ADJ => $adj ). keys %$adj ); 
-  say for @sorted; # Or for perl 5.8 use :  print  "$_\n" for @sorted ;
+  say for @sorted; 
 
   # -- OR --
 	
@@ -166,11 +172,12 @@ Algorithm::TSort - Perl extension for topological sort
   # my $graph = MyGraph->new;
   # # Initialization ...
 
-  my (@sorted ) = tsort( $graph , @nodes_for_sort );
+  my (@sorted ) = tsort( $graph, @nodes_for_sort );
 
 
 =head1 DESCRIPTION
-Topological sort for varios needs and inputs
+
+Topological sort for varing inputs
 
 =head2 EXPORT
 
@@ -186,11 +193,10 @@ A. G. Grishaev, E<lt>grian@cpan.orgE<gt>
 
 =head1 COPYRIGHT AND LICENSE
 
-Copyright (C) 2010 by A. G. Grishaev
+Copyright (C) 2012 by A. G. Grishaev
 
 This library is free software; you can redistribute it and/or modify
 it under the same terms as Perl itself, either Perl version 5.10.1 or,
 at your option, any later version of Perl 5 you may have available.
-
 
 =cut
