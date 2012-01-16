@@ -21,7 +21,7 @@ our @EXPORT_OK = ( @{ $EXPORT_TAGS{'all'} } );
 
 our @EXPORT = qw( tsort );
 
-our $VERSION = '0.03';
+our $VERSION = '0.04';
 {
     package Algorithm::TSort::ADJ;
     sub adj_nodes {
@@ -41,6 +41,11 @@ our $VERSION = '0.03';
         my $self = shift;
         my $node = shift;
         return $$self->($node);
+    }
+    package Algorithm::TSort::ADJSUB_ARRAYREF;
+    sub adj_nodes {
+	my $array = $_[0]->( $_[1] );
+	return $array ? @$array : ();
     }
     package Algorithm::TSort::Guard;
     sub new{
@@ -73,6 +78,9 @@ sub Graph($$) {
     }
     elsif ( $what eq 'ADJSUB' ) {
         return bless \( my $s = $data ), 'Algorithm::TSort::ADJSUB';
+    }
+    elsif ( $what eq 'ADJSUB_ARRAYREF' ) {
+        return bless $data, 'Algorithm::TSort::ADJSUB_ARRAYREF';
     }
     elsif ( $what eq 'ADJ' ) {
         my %c = %$data;
@@ -147,8 +155,13 @@ Algorithm::TSort - Perl extension for topological sort
 
   # -- OR --
 	
-  # $adj_sub = sub { return unless $$adj->{ $_[0] } ; return @{$adj->{$_[0]}}; };
-  my (@sorted) = tsort( Graph( SUB => $adj_sub ), @nodes_for_sort );
+  # $adj_sub = sub { return unless $adj->{ $_[0] } ; return @{$adj->{$_[0]}}; };
+  my (@sorted) = tsort( Graph( ADJSUB => $adj_sub ), @nodes_for_sort );
+
+  # -- OR --
+	
+  # $sub_arrayref = sub { $adj->{ $_[0] } };
+  my (@sorted) = tsort( Graph( ADJSUB_ARRAYREF => $adj_sub ), @nodes_for_sort );
 
   # -- OR --
 
@@ -157,7 +170,7 @@ Algorithm::TSort - Perl extension for topological sort
   #   2 4
   #   3 4";
   
-  my (@sorted) = tsort( Graph ( SCALAR => $buf ));
+  my (@sorted) = tsort( Graph ( SCALAR => $buf )); 
 
 
   # -- OR --
